@@ -1,0 +1,55 @@
+services:
+  app:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    container_name: laravel_app
+    working_dir: /var/www/html
+    volumes:
+      - ./src:/var/www/html
+      - ~/.composer:/tmp/composer               # cache ให้ composer ไวขึ้น (เลือกใส่ได้)
+    environment:
+      # ให้ php-fpm เห็นว่ารันใน dev
+      - APP_ENV=local
+    depends_on:
+      - db
+
+  web:
+    image: nginx:1.25-alpine
+    container_name: laravel_web
+    ports:
+      - "8080:80"          # เปิดเว็บที่ http://localhost:8080
+    volumes:
+      - ./src:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+
+  db:
+    image: mysql:8.0
+    container_name: laravel_db
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      - MYSQL_DATABASE=laravel
+      - MYSQL_USER=laravel
+      - MYSQL_PASSWORD=secret
+      - MYSQL_ROOT_PASSWORD=root
+    volumes:
+      - dbdata:/var/lib/mysql
+    ports:
+      - "3307:3306"        # ใช้พอร์ต 3307 ฝั่งโฮสต์ กันชนกับ MySQL ที่อาจมีอยู่
+
+  phpmyadmin:
+    image: phpmyadmin:5.2
+    container_name: laravel_pma
+    environment:
+      - PMA_HOST=db
+      - PMA_USER=root
+      - PMA_PASSWORD=root
+    ports:
+      - "8081:80"          # เปิด phpMyAdmin ที่ http://localhost:8081
+    depends_on:
+      - db
+
+volumes:
+  dbdata:
