@@ -1,0 +1,435 @@
+@extends($layout)
+
+@section('title', 'หน้าแรก - รีวิวอาหาร')
+
+@php
+    use Illuminate\Support\Str;
+@endphp
+
+@section('content')
+<div class="container py-4">
+    <h1 class="mb-4 text-center fw-bold text-danger">
+        🍱 รีวิวอาหารล่าสุด
+    </h1>
+
+    @auth
+    <div class="text-center mb-3">
+        <a href="{{ route('member.review.create') }}" class="btn btn-primary mt-2">
+            + เพิ่มรีวิว
+        </a>
+    </div>
+    @endauth
+
+    @if($reviews->isEmpty())
+        <div class="alert alert-info text-center shadow-sm">
+            😢 ยังไม่มีรีวิวในระบบตอนนี้<br>
+            <a href="{{ route('member.review.create') }}" class="btn btn-primary mt-2">
+                เพิ่มรีวิวแรกของคุณเลย!
+            </a>
+        </div>
+    @else
+        <div class="row g-4">
+            @foreach($reviews as $review)
+                <div class="col-md-4 d-flex justify-content-center">
+                    <div class="card fixed-size shadow-sm border-0 rounded-3 overflow-hidden js-open-modal" data-modal-id="reviewModal-{{ $review->review_id }}">
+                        <!-- รูปภาพ -->
+                        <img src="{{ $review->image_path 
+                            ? asset('storage/' . $review->image_path)
+                            : 'https://via.placeholder.com/400x250?text=No+Image' }}"
+                            class="card-img-top"
+                            alt="ภาพรีวิว">
+
+                        <div class="card-body">
+                            <h5 class="card-title text-danger fw-bold mb-1">
+                                <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#reviewModal-{{ $review->review_id }}">🍽️ <span class="star-heart-scale">{{ $review->menu_name }}</span></a>
+                            </h5>
+
+                            <p class="text-muted mb-1">
+                                🏠 ร้าน: <strong><a href="{{ route('home.index', ['restaurant' => $review->restaurant_id]) }}" class="text-decoration-underline text-reset">{{ $review->restaurant_name }}</a></strong>
+                            </p>
+
+                            <p class="small text-secondary mb-2">
+                                👤 โดย {{ $review->username }}
+                            </p>
+
+                            <p class="card-text text-truncate">{{ Str::limit($review->comment, 100, '...') }}</p>
+                            @php $comments = $commentsByReview[$review->review_id] ?? []; @endphp
+                            <div class="small text-muted">ความเห็น {{ count($comments) }}</div>
+
+                            @php $tags = $tagsMap[$review->review_id] ?? []; @endphp
+                            @if(count($tags))
+                                <div class="mt-2">
+                                    @foreach($tags as $tag)
+                                        <a href="{{ route('home.index', ['tag' => $tag]) }}" class="badge rounded-pill text-bg-light me-1">#{{ $tag }}</a>
+                                    @endforeach
+                                </div>
+                            @endif
+
+                            {{-- Comments preview (latest 2 top-level) --}}
+                            @php
+                                $comments = $commentsByReview[$review->review_id] ?? [];
+                                $preview = [];
+                                foreach ($comments as $c) {
+                                    if (!$c->parent_id) { $preview[] = $c; }
+                                    if (count($preview) >= 2) break;
+                                }
+                            @endphp
+                            @if(count($comments))
+                                <div class="mt-2 small">
+                                    @foreach($preview as $pc)
+                                        <div class="text-truncate">💬 {{ $pc->username }}: {{ $pc->content }}</div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+
+                        <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center">
+                            <span class="text-warning fw-bold star-heart-scale">
+                                ⭐ {{ number_format($review->rating, 1) }}
+                            </span>
+
+                            <div class="d-flex align-items-center gap-2">
+                                @auth
+                                    @php
+                                        $liked = isset($likedReviewIds) && in_array($review->review_id, $likedReviewIds);
+                                    @endphp
+                                    <div class="like-toggle" data-review-id="{{ $review->review_id }}">
+                                        <form method="POST" data-like="like" action="{{ route('member.review.like', ['id' => $review->review_id]) }}" class="m-0 p-0" style="display: {{ $liked ? 'none' : 'inline' }};">
+                                            @csrf
+                                            <button type="submit" class="p-0 border-0 bg-transparent" aria-label="ถูกใจ" title="ถูกใจ">
+                                                <span class="fs-5 like-heart" style="color:#9aa0a6; cursor:pointer;">&#9829;</span>
+                                            </button>
+                                        </form>
+                                        <form method="POST" data-like="unlike" action="{{ route('member.review.unlike', ['id' => $review->review_id]) }}" class="m-0 p-0" style="display: {{ $liked ? 'inline' : 'none' }};">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="p-0 border-0 bg-transparent" aria-label="เลิกถูกใจ" title="เลิกถูกใจ">
+                                                <span class="fs-5 like-heart" style="color:#e03131; cursor:pointer;">&#9829;</span>
+                                            </button>
+                                        </form>
+                                    </div>
+                                @else
+                                    <a href="{{ route('login.get') }}" class="text-decoration-none" title="เข้าสู่ระบบเพื่อกดถูกใจ">
+                                        <span class="fs-5 like-heart" style="color:#9aa0a6;">&#9829;</span>
+                                    </a>
+                                @endauth
+                                <span class="text-muted">{{ $review->like_count ?? 0 }}</span>
+                                @auth
+                                    @php $canDeleteReview = auth()->user()->hasRole('admin') || $review->user_id === auth()->user()->user_id; @endphp
+                                    @if($canDeleteReview)
+                                        <form method="POST" action="{{ route('member.review.destroy', ['id' => $review->review_id]) }}" onsubmit="return confirm('ยืนยันการลบรีวิวนี้?');" class="m-0 p-0">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">ลบรีวิว</button>
+                                        </form>
+                                    @endif
+                                @endauth
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modal for this review -->
+                    <div class="modal fade" id="reviewModal-{{ $review->review_id }}" tabindex="-1" aria-hidden="true">
+                      <div class="modal-dialog modal-xl modal-dialog-centered">
+                        <div class="modal-content">
+                          <div class="modal-header">
+                            <h5 class="modal-title">{{ $review->menu_name }} • {{ $review->restaurant_name }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                          </div>
+                          <div class="modal-body">
+                            <div class="row g-3">
+                              <div class="col-md-6 d-flex justify-content-center">
+                                <img src="{{ $review->image_path ? asset('storage/'.$review->image_path) : 'https://via.placeholder.com/400x400?text=No+Image' }}" class="modal-review-image rounded" alt="">
+                              </div>
+                              <div class="col-md-6">
+                                <div class="mb-2">ให้คะแนน: <span class="star-heart-scale">⭐ {{ number_format($review->rating, 1) }}</span></div>
+                                <div class="mb-2">โดย {{ $review->username }}</div>
+                                <div class="mb-3">{{ $review->comment }}</div>
+
+                                @php $tags = $tagsMap[$review->review_id] ?? []; @endphp
+                                @if(count($tags))
+                                  <div class="mb-3">
+                                    @foreach($tags as $tag)
+                                      <a href="{{ route('home.index', ['tag' => $tag]) }}" class="badge text-bg-light me-1">#{{ $tag }}</a>
+                                    @endforeach
+                                  </div>
+                                @endif
+
+                                <div class="d-flex align-items-center gap-2 mb-3">
+                                  @auth
+                                    @php $liked = isset($likedReviewIds) && in_array($review->review_id, $likedReviewIds); @endphp
+                                    <div class="like-toggle" data-review-id="{{ $review->review_id }}">
+                                      <form method="POST" data-like="like" action="{{ route('member.review.like', ['id' => $review->review_id]) }}" class="m-0 p-0" style="display: {{ $liked ? 'none' : 'inline' }};">
+                                        @csrf
+                                        <button type="submit" class="p-0 border-0 bg-transparent" aria-label="ถูกใจ" title="ถูกใจ">
+                                          <span class="fs-5 like-heart" style="color:#9aa0a6; cursor:pointer;">&#9829;</span>
+                                        </button>
+                                      </form>
+                                      <form method="POST" data-like="unlike" action="{{ route('member.review.unlike', ['id' => $review->review_id]) }}" class="m-0 p-0" style="display: {{ $liked ? 'inline' : 'none' }};">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="p-0 border-0 bg-transparent" aria-label="เลิกถูกใจ" title="เลิกถูกใจ">
+                                          <span class="fs-5 like-heart" style="color:#e03131; cursor:pointer;">&#9829;</span>
+                                        </button>
+                                      </form>
+                                    </div>
+                                  @endauth
+                                </div>
+
+                                @php $comments = $commentsByReview[$review->review_id] ?? []; @endphp
+                                @auth
+                                <form class="comment-form mb-3" data-review-id="{{ $review->review_id }}" action="{{ route('member.review.comment.store', ['id' => $review->review_id]) }}" method="POST">
+                                  @csrf
+                                  <div class="input-group">
+                                    <input type="text" name="content" class="form-control" placeholder="แสดงความคิดเห็น..." required>
+                                    <button class="btn btn-primary" type="submit">ส่ง</button>
+                                  </div>
+                                </form>
+                                @endauth
+
+                                <div class="review-comments" data-review-id="{{ $review->review_id }}">
+                                  <div class="review-comments-list">
+                                    @foreach($comments as $c)
+                                      @if(!$c->parent_id)
+                                      <div class="mb-2 border-start ps-2 comment-block" data-comment-id="{{ $c->comment_id }}">
+                                        <div class="small text-muted">{{ $c->username }} • {{ $c->created_at }}</div>
+                                        <div class="mb-1">{{ $c->content }}</div>
+                                        <div class="d-flex gap-2 align-items-center">
+                                          @auth
+                                          <form class="reply-form d-inline-flex align-items-center" data-review-id="{{ $review->review_id }}" action="{{ route('member.review.comment.store', ['id' => $review->review_id]) }}" method="POST">
+                                            @csrf
+                                            <input type="hidden" name="parent_id" value="{{ $c->comment_id }}">
+                                            <input type="text" name="content" class="form-control form-control-sm" placeholder="ตอบกลับ" required>
+                                            <button class="btn btn-sm btn-outline-primary ms-1" type="submit">ส่ง</button>
+                                          </form>
+                                          @php $canDelete = auth()->user()->hasRole('admin') || $c->user_id === auth()->user()->user_id; @endphp
+                                          @if($canDelete)
+                                          <form class="comment-delete-form" action="{{ route('member.comment.destroy', ['id' => $c->comment_id]) }}" method="POST">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">ลบ</button>
+                                          </form>
+                                          @endif
+                                          @endauth
+                                        </div>
+                                        @foreach($comments as $r)
+                                          @if($r->parent_id === $c->comment_id)
+                                          <div class="ms-3 mt-2 border-start ps-2 comment-block" data-comment-id="{{ $r->comment_id }}">
+                                            <div class="small text-muted">{{ $r->username }} • {{ $r->created_at }}</div>
+                                            <div>{{ $r->content }}</div>
+                                            @auth
+                                            @php $canDeleteR = auth()->user()->hasRole('admin') || $r->user_id === auth()->user()->user_id; @endphp
+                                            @if($canDeleteR)
+                                            <form class="comment-delete-form" action="{{ route('member.comment.destroy', ['id' => $r->comment_id]) }}" method="POST">
+                                              @csrf
+                                              @method('DELETE')
+                                              <button type="submit" class="btn btn-sm btn-outline-danger">ลบ</button>
+                                            </form>
+                                            @endif
+                                            @endauth
+                                          </div>
+                                          @endif
+                                        @endforeach
+                                      </div>
+                                      @endif
+                                    @endforeach
+                                  </div>
+                                </div>
+
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                </div>
+            @endforeach
+        </div>
+
+        <div class="mt-4 d-flex justify-content-center">
+            {{ $reviews->links('pagination::bootstrap-5') }}
+        </div>
+    @endif
+</div>
+@endsection
+
+@section('js_before')
+<script>
+  const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+  // AJAX like/unlike (toggle two forms)
+  document.querySelectorAll('form[data-like]').forEach(function(f){
+    f.addEventListener('submit', async function(e){
+      const likeType = this.getAttribute('data-like');
+      if(!(likeType === 'like' || likeType === 'unlike')) return;
+      e.preventDefault();
+      const method = likeType === 'unlike' ? 'DELETE' : 'POST';
+      const res = await fetch(this.action, { method, headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' }});
+      if(!res.ok) return; 
+      const data = await res.json();
+      const wrapper = this.closest('.like-toggle');
+      const reviewId = wrapper.getAttribute('data-review-id');
+
+      // Toggle all hearts/forms for this review (card + modal)
+      document.querySelectorAll('.like-toggle[data-review-id="'+reviewId+'"]').forEach(function(w){
+        const likeForm = w.querySelector('form[data-like="like"]');
+        const unlikeForm = w.querySelector('form[data-like="unlike"]');
+        if (data.liked) { if (likeForm) likeForm.style.display = 'none'; if (unlikeForm) unlikeForm.style.display = 'inline'; }
+        else { if (likeForm) likeForm.style.display = 'inline'; if (unlikeForm) unlikeForm.style.display = 'none'; }
+        w.querySelectorAll('.like-heart').forEach(function(h){
+          h.classList.remove('pop');
+          void h.offsetWidth;
+          h.style.color = data.liked ? '#e03131' : '#9aa0a6';
+          h.classList.add('pop');
+        });
+      });
+
+      // Update count in card footer for this review
+      const card = wrapper.closest('.card');
+      const countEl = card ? card.querySelector('.card-footer span.text-muted') : null;
+      if (countEl && data && typeof data.count !== 'undefined') { countEl.textContent = data.count; }
+    });
+  });
+
+  // AJAX comment submit (top-level and reply)
+  function wireCommentForm(form){
+    form.addEventListener('submit', async function(e){
+      e.preventDefault();
+      const fd = new FormData(this);
+      const res = await fetch(this.action, { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' }, body: fd });
+      if(!res.ok) return;
+      const data = await res.json();
+      if(!data.success) return;
+      // render new comment using template
+      const reviewId = this.getAttribute('data-review-id');
+      const list = document.querySelector('.review-comments[data-review-id="'+reviewId+'"] .review-comments-list');
+      const isReply = fd.get('parent_id');
+      const tpl = document.getElementById('comment-template');
+      const node = tpl.content.cloneNode(true);
+      node.querySelector('.comment-username').textContent = data.comment.username;
+      node.querySelector('.comment-created').textContent = data.comment.created_at;
+      node.querySelector('.comment-content').textContent = data.comment.content;
+      const block = node.querySelector('.comment-block');
+      if (isReply) block.classList.add('ms-3', 'mt-2');
+      list.appendChild(node);
+      // clear input
+      const input = this.querySelector('input[name="content"]');
+      if(input) input.value = '';
+    });
+  }
+
+  document.querySelectorAll('form.comment-form').forEach(wireCommentForm);
+  document.querySelectorAll('form.reply-form').forEach(wireCommentForm);
+
+  // AJAX delete comment
+  document.querySelectorAll('form.comment-delete-form').forEach(function(f){
+    f.addEventListener('submit', async function(e){
+      e.preventDefault();
+      const res = await fetch(this.action, { method: 'DELETE', headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' }});
+      if(!res.ok) return; const data = await res.json(); if(!data.success) return;
+      const block = this.closest('.comment-block');
+      if (block) block.remove();
+    });
+  });
+
+  // Open modal on card click (except on interactive elements)
+  function isInteractive(el){
+    return el.closest('button, a, input, textarea, select, label, form, .like-toggle');
+  }
+  document.querySelectorAll('.js-open-modal').forEach(function(card){
+    card.addEventListener('click', function(e){
+      if (isInteractive(e.target)) return;
+      const id = this.getAttribute('data-modal-id');
+      const el = document.getElementById(id);
+      if (el && window.bootstrap && bootstrap.Modal) {
+        const m = bootstrap.Modal.getOrCreateInstance(el);
+        m.show();
+      }
+    });
+  });
+</script>
+<template id="comment-template">
+  <div class="mb-2 border-start ps-2 comment-block">
+    <div class="small text-muted"><span class="comment-username"></span> • <span class="comment-created"></span></div>
+    <div class="comment-content"></div>
+  </div>
+</template>
+@endsection
+
+@section('css_before')
+<style>
+  /* ⭐ เพิ่มขนาดไอคอนดาวและหัวใจ */
+  .star-heart-scale { font-size: 120%; }
+
+  /* ❤️ หัวใจใหญ่ขึ้น + เด้ง */
+  .like-heart {
+    font-size: 2.0rem !important;             /* ✅ ใหญ่ขึ้น */
+    display: inline-block;
+    cursor: pointer;
+    transition: transform 0.2s ease, color 0.25s ease;
+    position: relative;
+  }
+
+  .like-heart:hover {
+    transform: scale(1.5);
+  }
+
+  /* animation ตอนถูกใจ */
+  .like-heart.active {
+    color: #e03131;
+    animation: heart-pop 0.45s ease;
+  }
+
+  /* เด้ง + หมุนเบา ๆ */
+  @keyframes heart-pop {
+    0%   { transform: scale(1); }
+    25%  { transform: scale(1.5) rotate(-10deg); }
+    50%  { transform: scale(1.2) rotate(10deg); }
+    75%  { transform: scale(1.4); }
+    100% { transform: scale(1); }
+  }
+
+  /* เอฟเฟกต์ระยิบระยับ */
+  .like-heart.active::after {
+    content: '✨';
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%) scale(0);
+    opacity: 0;
+    animation: sparkle 0.5s ease forwards;
+  }
+
+  @keyframes sparkle {
+    0% { transform: translate(-50%, -10px) scale(0); opacity: 0; }
+    50% { transform: translate(-50%, -25px) scale(1.4); opacity: 1; }
+    100% { transform: translate(-50%, -35px) scale(0.5); opacity: 0; }
+  }
+
+  /* Card layout */
+  .card .card-img-top { height: 220px; object-fit: cover; }
+  .card.fixed-size { width: 100%; max-width: 475px; height: 550px; cursor: pointer; }
+
+  /* Shadow and hover */
+  .card.fixed-size { 
+    box-shadow: 0 12px 28px rgba(0,0,0,.28) !important; 
+    transition: transform .15s ease, box-shadow .2s ease; 
+  }
+  .card.fixed-size:hover { 
+    transform: translateY(-3px); 
+    box-shadow: 0 18px 40px rgba(0,0,0,.38) !important; 
+  }
+
+  /* Modal style */
+  .modal-dialog.modal-xl { max-width: 90vw; }
+  .modal.fade .modal-dialog { transform: translateY(10px) scale(0.98); transition: transform 200ms ease, opacity 200ms ease; }
+  .modal.show .modal-dialog { transform: translateY(0) scale(1); }
+  .modal-content { box-shadow: 0 20px 60px rgba(0,0,0,.35); border-radius: 12px; }
+  .modal-backdrop.show { opacity: .6; backdrop-filter: blur(2px); }
+
+  .review-comments-list { max-height: 160px; overflow-y: auto; }
+  /* Modal image size (reduced) */
+  .modal-review-image { width: 100%; max-width: 500px; height: 500px; object-fit: cover; object-position: center; }
+</style>
+@endsection
