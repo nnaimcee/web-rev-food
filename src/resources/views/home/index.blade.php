@@ -23,9 +23,15 @@
     @if($reviews->isEmpty())
         <div class="alert alert-info text-center shadow-sm">
             😢 ยังไม่มีรีวิวในระบบตอนนี้<br>
+            @auth
             <a href="{{ route('member.review.create') }}" class="btn btn-primary mt-2">
                 เพิ่มรีวิวแรกของคุณเลย!
             </a>
+            @else
+            <a href="{{ route('login.get') }}" class="btn btn-outline-primary mt-2">
+                เข้าสู่ระบบเพื่อเพิ่มรีวิวแรกของคุณ
+            </a>
+            @endauth
         </div>
     @else
         <div class="row g-4">
