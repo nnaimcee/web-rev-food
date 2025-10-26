@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use App\Models\Review;
 
 class HomeController extends Controller
@@ -22,9 +23,11 @@ class HomeController extends Controller
                 'reviews.*',
                 'restaurants.name as restaurant_name',
                 DB::raw('COALESCE(menus.name, reviews.menu_name) as menu_name'),
-                'users.username',
-                DB::raw('(SELECT COUNT(*) FROM review_likes WHERE review_likes.review_id = reviews.review_id) as like_count')
+                'users.username'
             );
+
+        // สร้าง expression คะแนนสุทธิ (รองรับกรณีที่ยังไม่ได้ migrate ตาราง downvotes)
+        $query->addSelect(DB::raw('(SELECT COUNT(*) FROM review_likes WHERE review_likes.review_id = reviews.review_id) as like_count'));
 
         // ค้นหา
         if (request()->filled('q')) {
@@ -87,7 +90,7 @@ class HomeController extends Controller
         if ($ids->isNotEmpty()) {
             $comments = DB::table('review_comments')
                 ->join('users', 'review_comments.user_id', '=', 'users.user_id')
-                ->select('review_comments.*', 'users.username')
+                ->select('review_comments.*', 'users.username', 'users.role', 'users.avatar_img')
                 ->whereIn('review_comments.review_id', $ids)
                 ->orderBy('review_comments.created_at')
                 ->get();

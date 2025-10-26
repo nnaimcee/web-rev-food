@@ -22,4 +22,4 @@ RUN mkdir -p storage bootstrap/cache \
 # (ตัวเลือก) ตั้งค่า PHP เพิ่มเติมได้ที่นี่
 # RUN echo "memory_limit=512M" > /usr/local/etc/php/conf.d/memory-limit.ini
 
-CMD ["php-fpm"]
+CMD ["php-fpm"

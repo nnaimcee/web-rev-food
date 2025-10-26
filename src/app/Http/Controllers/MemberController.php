@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -47,6 +48,7 @@ class MemberController extends Controller
             'username'   => ['required','string','min:3', Rule::unique('users','username')->ignore($id,'user_id')],
             'email'      => ['required','email', Rule::unique('users','email')->ignore($id,'user_id')],
             'avatar_img' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
+            'password'   => 'nullable|min:6|confirmed',
         ], $msg);
 
         if ($validator->fails()) {
@@ -58,6 +60,10 @@ class MemberController extends Controller
 
         try {
             $updateData = $request->only(['username','email']);
+
+            if ($request->filled('password')) {
+                $updateData['password'] = Hash::make($request->input('password'));
+            }
 
             if ($request->hasFile('avatar_img')) {
                 if ($user->avatar_img && Storage::disk('public')->exists($user->avatar_img)) {
@@ -83,7 +89,8 @@ class MemberController extends Controller
             return back()->with('error', 'ผู้ใช้ไม่ถูกต้อง คุณพยายามแก้ไขผู้ใช้คนอื่น');
         }
 
-        return view('member.memberreset', compact('user'));
+        // ใช้ view ตามโครงสร้างโฟลเดอร์ที่มีอยู่จริง: resources/views/members/reset.blade.php
+        return view('members.reset', compact('user'));
     }
 
     public function resetMemberPassword(int $id, Request $request)

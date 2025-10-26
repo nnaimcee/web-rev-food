@@ -1,11 +1,16 @@
 <!-- resources/views/admin/dashboard.blade.php -->
 @extends('layouts.app')
+@php use Illuminate\Support\Str; @endphp
 
 @section('title', 'Dashboard')
 
 @section('content')
-  <div class="d-flex align-items-center mb-4">
-    <h1 class="h3 mb-0">Dashboard</h1>
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0">Dashboard by nong reaw</h1>
+    <div class="d-flex gap-2">
+      <a href="{{ route('restaurants.create') }}" class="btn btn-primary btn-sm">+ เพิ่มร้านค้า</a>
+      <a href="{{ route('admin.users.index') }}" class="btn btn-outline-dark btn-sm">จัดการผู้ใช้งาน</a>
+    </div>
   </div>
 
   <!-- KPI Cards -->

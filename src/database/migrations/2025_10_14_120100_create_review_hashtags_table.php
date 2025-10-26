@@ -7,9 +7,12 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
+        if (Schema::hasTable('review_hashtags')) {
+            return; // ตารางมีอยู่แล้ว ข้าม
+        }
         Schema::create('review_hashtags', function (Blueprint $table) {
             $table->integer('id', true);
-            $table->integer('review_id');
+            $table->unsignedInteger('review_id');
             $table->string('tag');
             $table->timestamp('created_at')->useCurrent();
 
@@ -24,4 +27,3 @@ return new class extends Migration {
         Schema::dropIfExists('review_hashtags');
     }
 };
-

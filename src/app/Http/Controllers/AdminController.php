@@ -61,4 +61,46 @@ class AdminController extends Controller
 
         return view('admin.dashboard', compact('stats', 'topRestaurants', 'latestReviews'));
     }
+
+    // รายการผู้ใช้งานสำหรับแอดมิน
+    public function users()
+    {
+        $users = DB::table('users')
+            ->select('user_id', 'username', 'email', 'role', 'created_at')
+            ->orderByDesc('created_at')
+            ->get();
+
+        return view('admin.users.index', compact('users'));
+    }
+
+    // เปลี่ยนสิทธิ์ผู้ใช้งาน (member/admin)
+    public function updateUserRole($id, Request $request)
+    {
+        $request->validate(['role' => 'required|in:member,admin']);
+        $selfId = auth()->id();
+        if ((int)$id === (int)$selfId && $request->role !== 'admin') {
+            return back()->with('error', 'ไม่สามารถลดสิทธิ์ตัวเองได้');
+        }
+        DB::table('users')->where('user_id', $id)->update(['role' => $request->role]);
+        return back()->with('success', 'อัปเดตสิทธิ์ผู้ใช้เรียบร้อย');
+    }
+
+    // รีเซ็ตรหัสผ่าน (ตั้งรหัสใหม่เป็น password123 หรือตามที่ส่งมา)
+    public function resetUserPassword($id, Request $request)
+    {
+        $new = $request->input('password', 'password123');
+        DB::table('users')->where('user_id', $id)->update(['password' => bcrypt($new)]);
+        return back()->with('success', 'รีเซ็ตรหัสผ่านเรียบร้อย');
+    }
+
+    // ลบผู้ใช้
+    public function destroyUser($id)
+    {
+        $selfId = auth()->id();
+        if ((int)$id === (int)$selfId) {
+            return back()->with('error', 'ไม่สามารถลบผู้ใช้ตัวเองได้');
+        }
+        DB::table('users')->where('user_id', $id)->delete();
+        return back()->with('success', 'ลบผู้ใช้เรียบร้อย');
+    }
 }

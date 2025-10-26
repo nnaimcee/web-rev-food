@@ -15,9 +15,10 @@ class Restaurant extends Model
 
     protected $fillable = [
         'name',
-        'address',
+        'category',
+        'location',
         'description',
-        'image_path',
+        'restaurant_img',
     ];
 
     public function reviews()

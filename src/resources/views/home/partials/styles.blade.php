@@ -1,16 +1,38 @@
 <style>
-  /* ไอคอนและแอนิเมชันหัวใจ/ดาว */
+  /* ไอคอนและแอนิเมชันดาว/อัปโหวต */
   .star-heart-scale { font-size: 120%; }
-  .like-heart { font-size: 150%; display:inline-block; }
-  .like-heart.pop { animation: heart-pop 300ms ease; }
-  @keyframes heart-pop { 0% { transform: scale(1); } 50% { transform: scale(1.4); } 100% { transform: scale(1); } }
+  .vote-arrow { font-size: 150%; display:inline-block; }
+  .vote-arrow.pop { animation: vote-pop 250ms ease; }
+  @keyframes vote-pop { 0% { transform: translateY(0) scale(1); } 50% { transform: translateY(-2px) scale(1.15); } 100% { transform: translateY(0) scale(1); } }
+  .vote-arrow.inactive { filter: grayscale(100%); opacity: .6; }
+  .vote-up.active { color: #198754 !important; }
+  .vote-down.active { color: #dc3545 !important; }
+
+  /* กันปุ่ม+ตัวเลขกระดิกเวลา toggle */
+  .vote-form { display:inline-block; width:28px; text-align:center; }
+  .like-toggle { gap: 6px; }
+  .like-count, .dislike-count { display:inline-block; min-width:3ch; text-align:center; font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+  /* ฟอร์มที่ถูกซ่อนด้วย visibility ไม่ดักคลิก เพื่อให้คลิกการ์ดเปิด modal ได้ */
+  .vote-form[style*="visibility: hidden"] { pointer-events: none; }
 
   /* การ์ดและภาพ (ครอปไม่ใช้ภาพเต็ม) */
   .card.fixed-size { width:100%; max-width:450px; height:500px; cursor:pointer; }
   .card .card-img-top { height: 220px; object-fit: cover; }
 
   /* รายการคอมเมนต์ย่อย */
-  .review-comments-list { max-height: 160px; overflow-y: auto; }
+  .review-comments-list { max-height: 200px; overflow-y: auto; padding-right: 4px; }
+
+  /* ปรับหน้าตาคอมเมนต์ให้ดูดีขึ้น */
+  .comment-block {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-left: 4px solid #0d6efd;
+    border-radius: 10px;
+    padding: 8px 12px;
+  }
+  .comment-block + .comment-block { margin-top: 8px; }
+  .comment-block .small.text-muted { font-size: .84rem; margin-bottom: 4px; }
+  .comment-content { white-space: pre-wrap; }
 
   /* Modal เกือบเต็มจอ + แอนิเมชัน + เงา */
   .modal-dialog.modal-xl { max-width: 90vw; }

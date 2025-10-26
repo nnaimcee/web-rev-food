@@ -46,15 +46,13 @@ class AuthController extends Controller
         }
 
         try {
-            // ✅ สร้าง user ใหม่และเก็บในตัวแปร
+            // ✅ สร้าง user ใหม่ (กำหนด role เริ่มต้นเป็น member)
             $user = UserModel::create([
                 'username' => strip_tags($request->input('username')),
                 'password' => Hash::make($request->password),
                 'email'    => strip_tags($request->input('email')),
+                'role'     => 'member',
             ]);
-
-            // ✅ กำหนด role 'user' ผ่าน Spatie Permission
-            $user->assignRole('user');
 
             return redirect()->route('login.get')->with('success', 'สมัครสมาชิกเรียบร้อยแล้ว');
         } catch (\Exception $e) {
@@ -84,10 +82,10 @@ class AuthController extends Controller
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
 
-            // 🔹 ตรวจสิทธิ์ตาม Role ของ Spatie
-            if ($user->hasRole('admin')) {
+            // 🔹 ตรวจสิทธิ์ตามคอลัมน์ role โดยตรง
+            if ($user->role === 'admin') {
                 return redirect()->route('admin.dashboard');
-            } elseif ($user->hasRole('user')) {
+            } elseif ($user->role === 'member') {
                 return redirect()->route('member.m_home.get');
             }
 

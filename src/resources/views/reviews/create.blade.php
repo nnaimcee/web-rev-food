@@ -16,9 +16,17 @@
                     <select name="restaurant_id" id="restaurant_id" class="form-select" required>
                         <option value="">-- เลือกร้านอาหาร --</option>
                         @foreach($restaurants as $restaurant)
-                            <option value="{{ $restaurant->restaurant_id }}">{{ $restaurant->name }}</option>
+                            <option value="{{ $restaurant->restaurant_id }}" @selected(old('restaurant_id') == $restaurant->restaurant_id)>{{ $restaurant->name }}</option>
                         @endforeach
+                        <option value="new" @selected(old('restaurant_id') === 'new')>+ เพิ่มร้านใหม่...</option>
                     </select>
+                </div>
+
+                {{-- 🔹 กรอกร้านใหม่ เมื่อเลือก "+ เพิ่มร้านใหม่..." --}}
+                <div id="new-restaurant-fields" class="mb-3" style="display:none;">
+                    <label for="new_restaurant_name" class="form-label">ชื่อร้าน</label>
+                    <input type="text" name="new_restaurant_name" id="new_restaurant_name" class="form-control" placeholder="เช่น ก๋วยเตี๋ยวเรือคุณแม่" value="{{ old('new_restaurant_name') }}">
+                    <div class="form-text">กรอกเมื่อยังไม่มีร้านในรายการด้านบน</div>
                 </div>
 
                 {{-- 🔹 เมนู --}}
@@ -75,4 +83,19 @@
 .rating-stars label:hover ~ label{ color:#ffc107; }
 .rating-stars input:checked ~ label{ color:#ffca08; }
 </style>
+
+{{-- 🔧 Toggle ฟิลด์เพิ่มร้านใหม่ --}}
+<script>
+  (function(){
+    const select = document.getElementById('restaurant_id');
+    const panel  = document.getElementById('new-restaurant-fields');
+    const input  = document.getElementById('new_restaurant_name');
+    function sync(){
+      const isNew = select && select.value === 'new';
+      if(panel) panel.style.display = isNew ? 'block' : 'none';
+      if(input) input.required = !!isNew;
+    }
+    if(select){ select.addEventListener('change', sync); sync(); }
+  })();
+</script>
 @endsection

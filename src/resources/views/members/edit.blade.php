@@ -69,7 +69,7 @@
                             @if($user->avatar_img)
                                 <img src="{{ asset('storage/'.$user->avatar_img) }}" alt="avatar" width="80" class="rounded mb-2 border">
                             @else
-                                <img src="{{ asset('images/default-avatar.png') }}" alt="default avatar" width="80" class="rounded mb-2 border">
+                                <img src="https://cdn-icons-png.freepik.com/512/11121/11121549.png" alt="default avatar" width="80" class="rounded mb-2 border">
                             @endif
                             <input type="file" 
                                    class="form-control @error('avatar_img') is-invalid @enderror" 
@@ -78,6 +78,18 @@
                             @error('avatar_img')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
+                        </div>
+
+                        <hr>
+                        <div class="mb-2 fw-semibold">เปลี่ยนรหัสผ่าน (ไม่บังคับ)</div>
+                        <div class="mb-3">
+                            <label class="form-label" for="password">รหัสผ่านใหม่</label>
+                            <input type="password" name="password" id="password" class="form-control @error('password') is-invalid @enderror" placeholder="ปล่อยว่างหากไม่ต้องการเปลี่ยน">
+                            @error('password') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="password_confirmation">ยืนยันรหัสผ่านใหม่</label>
+                            <input type="password" name="password_confirmation" id="password_confirmation" class="form-control" placeholder="ยืนยันรหัสผ่านใหม่">
                         </div>
 
                         <!-- Submit -->

@@ -15,8 +15,9 @@ class MemberMiddleware
             return redirect()->route('login.get')->with('error', 'กรุณาเข้าสู่ระบบก่อน');
         }
 
-        // อนุญาตทั้งผู้ใช้ทั่วไปและแอดมินเข้าเขต member
-        if (!Auth::user()->hasAnyRole(['user','admin'])) {
+        // อนุญาตทั้งผู้ใช้ทั่วไป (member) และแอดมินเข้าเขต member โดยเช็คจากคอลัมน์ role
+        $role = Auth::user()->role ?? null;
+        if (!in_array($role, ['member','admin'], true)) {
             return redirect()->route('home.get')->with('error', 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้');
         }
 

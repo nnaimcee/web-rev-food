@@ -7,7 +7,9 @@ use App\Http\Controllers\MemberController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ReviewCommentController;
 use App\Http\Controllers\HashtagController;
+use App\Http\Controllers\RestaurantController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Middleware\VerifyCsrfToken;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,10 +26,15 @@ Route::get('/tags', [HashtagController::class, 'index'])->name('tags.index');
 |--------------------------------------------------------------------------
 */
 Route::get('/login', [AuthController::class, 'login'])->name('login.get');
-Route::post('/post-login', [AuthController::class, 'postLogin'])->name('login.post');
+// ชั่วคราว: กัน 419 Page Expired ในสภาพแวดล้อมที่ session/CSRF มีปัญหา
+Route::post('/post-login', [AuthController::class, 'postLogin'])
+    ->name('login.post')
+    ->withoutMiddleware([VerifyCsrfToken::class]);
 
 Route::get('/register', [AuthController::class, 'register'])->name('register.get');
-Route::post('/post-register', [AuthController::class, 'postRegister'])->name('register.post');
+Route::post('/post-register', [AuthController::class, 'postRegister'])
+    ->name('register.post')
+    ->withoutMiddleware([VerifyCsrfToken::class]);
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
@@ -38,6 +45,11 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 */
 Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
+    // 🧑‍⚖️ จัดการผู้ใช้งาน
+    Route::get('/admin/users', [AdminController::class, 'users'])->name('admin.users.index');
+    Route::post('/admin/users/{id}/role', [AdminController::class, 'updateUserRole'])->name('admin.users.updateRole');
+    Route::post('/admin/users/{id}/reset-password', [AdminController::class, 'resetUserPassword'])->name('admin.users.resetPassword');
+    Route::delete('/admin/users/{id}', [AdminController::class, 'destroyUser'])->name('admin.users.destroy');
 });
 
 /*
@@ -62,19 +74,29 @@ Route::middleware(['auth', 'member'])->prefix('member')->name('member.')->group(
     Route::get('/review/create', [ReviewController::class, 'create'])->name('review.create');
     Route::post('/review/store', [ReviewController::class, 'store'])->name('review.store');
 
-    // 🍣 รายการรีวิวของสมาชิก
-    Route::get('/review', [ReviewController::class, 'index'])->name('review.index');
+    // 🍣 รายการรีวิวของสมาชิก (ลบ route index ที่ไม่ใช้ เหลือเฉพาะลบ)
     Route::delete('/review/{id}/delete', [ReviewController::class, 'destroy'])->name('review.destroy');
 
     // 👍🏻 ไลค์รีวิว
     Route::post('/review/{id}/like', [ReviewController::class, 'like'])->name('review.like');
     Route::delete('/review/{id}/unlike', [ReviewController::class, 'unlike'])->name('review.unlike');   
+    // ⬇️ โหวตลงรีวิว
+    Route::post('/review/{id}/downvote', [ReviewController::class, 'downvote'])->name('review.downvote');
+    Route::delete('/review/{id}/undownvote', [ReviewController::class, 'undownvote'])->name('review.undownvote');   
 
-    // ✏️ แก้ไขรีวิว
-    Route::get('/review/{id}/edit', [ReviewController::class, 'edit'])->name('review.edit');
-    Route::put('/review/{id}/update', [ReviewController::class, 'update'])->name('review.update');
+    // ✏️ แก้ไขรีวิว (ปิดใช้งานชั่วคราว)
 
     // 💬 คอมเมนต์รีวิว
     Route::post('/review/{id}/comment', [ReviewCommentController::class, 'store'])->name('review.comment.store');
     Route::delete('/comment/{id}', [ReviewCommentController::class, 'destroy'])->name('comment.destroy');
+});
+
+/*
+|--------------------------------------------------------------------------
+| 🏪 Restaurant Routes (สมาชิกและแอดมินใช้ได้)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth'])->group(function () {
+    Route::get('/restaurants/create', [RestaurantController::class, 'create'])->name('restaurants.create');
+    Route::post('/restaurants', [RestaurantController::class, 'store'])->name('restaurants.store');
 });

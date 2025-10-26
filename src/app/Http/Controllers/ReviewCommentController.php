@@ -47,6 +47,9 @@ class ReviewCommentController extends Controller
                     'parent_id' => $parentId,
                     'content' => $request->input('content'),
                     'username' => Auth::user()->username,
+                    'avatar_img' => Auth::user()->avatar_img,
+                    'role' => Auth::user()->role ?? null,
+                    'can_edit' => true,
                     'created_at' => now()->toDateTimeString(),
                 ],
             ]);
@@ -67,7 +70,8 @@ class ReviewCommentController extends Controller
             return redirect()->route('login.get');
         }
 
-        $canDelete = $user->hasRole('admin') || $comment->user_id === $user->user_id;
+        // แอดมิน (role = admin) หรือเจ้าของคอมเมนต์ลบได้
+        $canDelete = (($user->role ?? null) === 'admin') || ($comment->user_id === $user->user_id);
         if (!$canDelete) {
             return redirect()->back()->with('error', 'คุณไม่มีสิทธิ์ลบคอมเมนต์นี้');
         }
@@ -79,4 +83,5 @@ class ReviewCommentController extends Controller
         }
         return redirect()->back()->with('success', 'ลบคอมเมนต์แล้ว');
     }
+
 }

@@ -16,8 +16,8 @@ class AdminMiddleware
             return redirect()->route('login.get')->with('error', 'กรุณาเข้าสู่ระบบก่อน');
         }
 
-        // ตรวจสอบสิทธิ์ด้วย Spatie Roles
-        if (!Auth::user()->hasRole('admin')) {
+        // ตรวจสอบสิทธิ์จากคอลัมน์ role โดยตรง เพื่อลดการพึ่งพา Spatie
+        if (!(Auth::user()->role === 'admin')) {
             return redirect()->route('home.get')->with('error', 'คุณไม่มีสิทธิ์เข้าถึงหน้านี้');
         }
 
